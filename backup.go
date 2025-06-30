@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sysundo/lang"
 	"time"
 )
 
@@ -38,7 +39,7 @@ func NewBackupManager() *BackupManager {
 	// Yedekleme dizinini oluştur
 	err = os.MkdirAll(backupDir, 0755)
 	if err != nil {
-		fmt.Printf("Uyarı: Yedekleme dizini oluşturulamadı: %v\n", err)
+		fmt.Printf(lang.Get("backup_dir_create_warning")+"\n", err)
 	}
 
 	return &BackupManager{
@@ -50,13 +51,13 @@ func (bm *BackupManager) BackupFile(filePath string) (string, error) {
 	// Mutlak yol al
 	absPath, err := filepath.Abs(filePath)
 	if err != nil {
-		return "", fmt.Errorf("mutlak yol alınamadı: %v", err)
+		return "", fmt.Errorf(lang.Get("absolute_path_error"), err)
 	}
 
 	// Dosya bilgilerini al
 	_, err = os.Stat(absPath)
 	if err != nil {
-		return "", fmt.Errorf("dosya bilgileri alınamadı: %v", err)
+		return "", fmt.Errorf(lang.Get("file_info_error"), err)
 	}
 
 	// Yedekleme dosya adını oluştur
@@ -69,7 +70,7 @@ func (bm *BackupManager) BackupFile(filePath string) (string, error) {
 	// Dosyayı kopyala
 	err = bm.copyFile(absPath, backupPath)
 	if err != nil {
-		return "", fmt.Errorf("dosya kopyalanamadı: %v", err)
+		return "", fmt.Errorf(lang.Get("file_copy_error"), err)
 	}
 
 	return backupPath, nil
@@ -102,12 +103,12 @@ func (bm *BackupManager) CreateBackupRecord(backupPaths map[string]string, comma
 	recordPath := filepath.Join(bm.backupDir, "last_backup.json")
 	data, err := json.MarshalIndent(record, "", "  ")
 	if err != nil {
-		return fmt.Errorf("JSON marshal hatası: %v", err)
+		return fmt.Errorf(lang.Get("json_marshal_error"), err)
 	}
 
 	err = os.WriteFile(recordPath, data, 0644)
 	if err != nil {
-		return fmt.Errorf("kayıt dosyası yazılamadı: %v", err)
+		return fmt.Errorf(lang.Get("record_file_write_error"), err)
 	}
 
 	return nil

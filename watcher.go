@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sysundo/lang"
 )
 
 type FileWatcher struct {
@@ -37,7 +38,7 @@ func NewFileWatcher() *FileWatcher {
 
 func (fw *FileWatcher) ExecuteWithBackup(args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("komut belirtilmedi")
+		return fmt.Errorf(lang.Get("no_command_specified"))
 	}
 
 	command := args[0]
@@ -51,7 +52,7 @@ func (fw *FileWatcher) ExecuteWithBackup(args []string) error {
 	// Etkilenecek dosyaları bul
 	affectedFiles, err := fw.findAffectedFiles(command, commandArgs)
 	if err != nil {
-		return fmt.Errorf("etkilenen dosyalar bulunamadı: %v", err)
+		return fmt.Errorf(lang.Get("affected_files_not_found"), err)
 	}
 
 	// Geçerli dosyaları filtrele ve yedekle
@@ -60,11 +61,11 @@ func (fw *FileWatcher) ExecuteWithBackup(args []string) error {
 		if fw.shouldBackupFile(file) {
 			backupPath, err := fw.backupManager.BackupFile(file)
 			if err != nil {
-				fmt.Printf("Uyarı: %s dosyası yedeklenemedi: %v\n", file, err)
+				fmt.Printf(lang.Get("backup_warning")+"\n", file, err)
 			} else {
 				absPath, _ := filepath.Abs(file)
 				backupPaths[absPath] = backupPath
-				fmt.Printf("Yedeklendi: %s\n", file)
+				fmt.Printf(lang.Get("backed_up")+"\n", file)
 			}
 		}
 	}
@@ -73,7 +74,7 @@ func (fw *FileWatcher) ExecuteWithBackup(args []string) error {
 	if len(backupPaths) > 0 {
 		err := fw.backupManager.CreateBackupRecord(backupPaths, command, commandArgs)
 		if err != nil {
-			fmt.Printf("Uyarı: Yedekleme kaydı oluşturulamadı: %v\n", err)
+			fmt.Printf(lang.Get("backup_record_warning")+"\n", err)
 		}
 	}
 

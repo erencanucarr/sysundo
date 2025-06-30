@@ -1,108 +1,189 @@
-# sysundo - Sistem Dosya İşlemleri Yedekleme Aracı
+# sysundo - Automatic Backup Tool for System File Operations
 
-`sysundo`, Linux sistemlerde dosya işlemlerini (rm, mv, cp) gerçekleştirmeden önce otomatik yedekleme yapan ve gerektiğinde geri yükleme imkanı sunan bir CLI aracıdır.
+`sysundo` is a multilingual CLI tool that automatically backs up files before performing file operations (rm, mv, cp) on Linux systems and provides restore functionality when needed.
 
-## Özellikler
+## Features
 
-- **Otomatik Yedekleme**: `rm`, `mv`, `cp` komutları çalıştırılmadan önce etkilenen dosyaları otomatik olarak yedekler
-- **Akıllı Filtreleme**: Sadece desteklenen dosya türlerini (.txt, .md, .json, .yaml, .yml, .sh, .js, .py) yedekler
-- **Boyut Sınırı**: Maksimum 10MB boyutundaki dosyaları yedekler
-- **Geri Yükleme**: Son yedeklenen dosyaları tek komutla geri yükler
-- **Güvenli Depolama**: Yedekler kullanıcının ev dizininde `.sysundo/cache` klasöründe saklanır
+- **Automatic Backup**: Automatically backs up affected files before executing `rm`, `mv`, `cp` commands
+- **Smart Filtering**: Only backs up supported file types (.txt, .md, .json, .yaml, .yml, .sh, .js, .py)
+- **Size Limit**: Backs up files with a maximum size of 10MB
+- **Restore**: Restore last backed up files with a single command
+- **Safe Storage**: Backups are stored in `.sysundo/cache` folder in user's home directory
+- **🌍 Multilingual Support**: English and Turkish support, new languages can be easily added
+- **🔄 Automatic Language Detection**: Automatically detects your system language
 
-## Kurulum
+## Installation
 
 ```bash
-# Projeyi derle
+# Build the project
 go build -o sysundo
 
-# Binary'yi PATH'e ekle (isteğe bağlı)
+# Add binary to PATH (optional)
 sudo cp sysundo /usr/local/bin/
 ```
 
-## Kullanım
+## Usage
 
-### Watch Modu
-Dosya işlemlerini yedekleme ile birlikte gerçekleştir:
+### Watch Mode
+Execute file operations with backup:
 
 ```bash
-# Dosya silme işlemi ile birlikte yedekleme
-sysundo watch rm dosya.txt
+# File deletion with backup
+sysundo watch rm file.txt
 
-# Dosya taşıma işlemi ile birlikte yedekleme  
-sysundo watch mv kaynak.py hedef/
+# File move with backup  
+sysundo watch mv source.py target/
 
-# Dosya kopyalama işlemi ile birlikte yedekleme
+# File copy with backup
 sysundo watch cp *.json backup/
 
-# Wildcard kullanımı
+# Using wildcards
 sysundo watch rm *.py
 ```
 
-### Undo Modu
-Son yedeklenen dosyaları geri yükle:
+### Undo Mode
+Restore last backed up files:
 
 ```bash
 sysundo undo
 ```
 
-### Yardım
+### Language Management
+```bash
+# Show current language and supported languages
+sysundo lang
+
+# Switch to English
+sysundo lang en
+
+# Switch to Turkish
+sysundo lang tr
+```
+
+### Help
 ```bash
 sysundo help
 ```
 
-## Desteklenen Dosya Türleri
+## Supported Languages
 
-- `.txt` - Metin dosyaları
-- `.md` - Markdown dosyaları  
-- `.json` - JSON dosyaları
-- `.yaml`, `.yml` - YAML dosyaları
-- `.sh` - Shell script dosyaları
-- `.js` - JavaScript dosyaları
-- `.py` - Python dosyaları
+- 🇺🇸 **English** (en) - Default language
+- 🇹🇷 **Turkish** (tr) - Full support
+- 📄 **Template** (example.json) - Template for new languages
 
-## Yedekleme Mekanizması
+### Adding New Languages
 
-1. **Yedekleme Dizini**: Yedekler `~/.sysundo/cache/` dizininde saklanır
-2. **Dosya Adlandırma**: `YYYYMMDD_HHMMSS_dosyaadi_ID` formatında adlandırılır
-3. **Metadata**: Son yedekleme bilgileri `last_backup.json` dosyasında tutulur
-4. **Geri Yükleme**: Dosyalar orijinal konumlarına izinleri korunarak geri yüklenir
+1. Copy `lang/example.json` file
+2. Rename it with your language code (e.g., `fr.json`)
+3. Translate all messages
+4. Test: `sysundo lang fr`
 
-## Sınırlamalar
+See [lang/README.md](lang/README.md) for detailed instructions.
 
-- Maksimum dosya boyutu: 10MB
-- Sadece belirtilen dosya türleri yedeklenir
-- Dizinler yedeklenmez (sadece dosyalar)
-- Binary dosyalar (.mp4, .zip, .tar, .gz) otomatik olarak hariç tutulur
+## Supported File Types
 
-## Örnek Kullanım Senaryoları
+- `.txt` - Text files
+- `.md` - Markdown files  
+- `.json` - JSON files
+- `.yaml`, `.yml` - YAML files
+- `.sh` - Shell script files
+- `.js` - JavaScript files
+- `.py` - Python files
+
+## Backup Mechanism
+
+1. **Backup Directory**: Backups are stored in `~/.sysundo/cache/` directory
+2. **File Naming**: Files are named in `YYYYMMDD_HHMMSS_filename_ID` format
+3. **Metadata**: Last backup information is kept in `last_backup.json` file
+4. **Restore**: Files are restored to their original locations with permissions preserved
+
+## Limitations
+
+- Maximum file size: 10MB
+- Only specified file types are backed up
+- Directories are not backed up (files only)
+- Binary files (.mp4, .zip, .tar, .gz) are automatically excluded
+
+## Example Usage Scenarios
 
 ```bash
-# Önemli script dosyalarını yedekleyerek sil
+# Delete important script files with backup
 sysundo watch rm cleanup.sh setup.py
 
-# Konfigürasyon dosyalarını güvenli şekilde taşı
+# Safely move configuration files
 sysundo watch mv config.json backup/
 
-# Eğer bir hata yapıldıysa geri yükle
+# If you made a mistake, restore
 sysundo undo
+
+# Change language
+sysundo lang en
 ```
 
-## Proje Yapısı
+## Project Structure
 
-- `main.go` - Ana CLI uygulaması ve komut yönetimi
-- `watcher.go` - Dosya izleme ve komut çalıştırma mantığı
-- `backup.go` - Dosya yedekleme işlemleri
-- `restorer.go` - Dosya geri yükleme işlemleri
+```
+sysundo/
+├── main.go          # Main CLI application
+├── watcher.go       # File watching and command execution
+├── backup.go        # Backup operations
+├── restorer.go      # Restore operations
+├── lang/            # Language files
+│   ├── lang.go      # Language management system
+│   ├── en.json      # English translations
+│   ├── tr.json      # Turkish translations
+│   ├── example.json # Template for new languages
+│   └── README.md    # Language addition guide
+├── go.mod           # Go module definition
+├── Makefile         # Build and installation commands
+└── README.md        # Project documentation
+```
 
-## Geliştirme
+## Development
 
-Proje tamamen Go standart kütüphaneleri kullanılarak geliştirilmiştir. Herhangi bir dış bağımlılık bulunmamaktadır.
+The project is developed entirely using Go standard libraries. There are no external dependencies.
 
 ```bash
-# Test et
+# Test
 go run . help
 
-# Derle
+# Build
 go build -o sysundo
-``` 
+
+# Language tests
+go run . lang
+go run . lang tr
+go run . help
+```
+
+## Makefile Commands
+
+```bash
+make build          # Build the application
+make install        # Install system-wide
+make clean          # Clean up
+make dev ARGS=help  # Run in development mode
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+### To Add a New Language
+
+1. Copy `lang/example.json` to `lang/your_lang_code.json`
+2. Translate all messages
+3. Add your language to the `getLangNativeName` function in `main.go`
+4. Test and submit a Pull Request
+
+## License
+
+This project is licensed under the MIT License. See the LICENSE file for details.
+
+---
+
+**sysundo** - Keep your files safe, undo your mistakes! 🛡️ 
