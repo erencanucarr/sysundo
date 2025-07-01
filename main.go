@@ -82,13 +82,17 @@ func handleLangMode(args []string) {
 		fmt.Println()
 		fmt.Println(lang.Get("available_languages"))
 
-		if err == nil {
-			for _, langCode := range availableLangs {
-				if langCode != "example" { // example.json dosyasını listede gösterme
-					nativeName := getLangNativeName(langCode)
-					fmt.Printf("  %s (%s)\n", langCode, nativeName)
-				}
+		if err != nil {
+			fmt.Printf("Error getting available languages: %v\n", err)
+			return
+		}
+
+		for _, langCode := range availableLangs {
+			if langCode == "example" {
+				continue // example.json dosyasını listede gösterme
 			}
+			nativeName := getLangNativeName(langCode)
+			fmt.Printf("  %s (%s)\n", langCode, nativeName)
 		}
 		return
 	}

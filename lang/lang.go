@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 )
 
 type LangManager struct {
@@ -97,19 +98,40 @@ func (lm *LangManager) saveLangaugeConfig() error {
 }
 
 func (lm *LangManager) LoadLanguage(langCode string) error {
-	// Çalıştırılabilir dosyanın bulunduğu dizini bul
-	execPath, err := os.Executable()
-	if err != nil {
-		execPath = "."
+	var langFile string
+	var err error
+
+	// Farklı yolları sırayla deneyeceğiz
+	possiblePaths := []string{
+		// Kaynak kod yanında (geliştirme ortamı)
+		filepath.Join("lang", langCode+".json"),
+		// Go module root'a göre
+		filepath.Join(".", "lang", langCode+".json"),
 	}
-	execDir := filepath.Dir(execPath)
 
-	// Lang dosyasının yolunu oluştur
-	langFile := filepath.Join(execDir, "lang", langCode+".json")
+	// Executable path'i dene
+	if execPath, err := os.Executable(); err == nil {
+		execDir := filepath.Dir(execPath)
+		possiblePaths = append([]string{
+			filepath.Join(execDir, "lang", langCode+".json"),
+		}, possiblePaths...)
+	}
 
-	// Eğer executable yanında yoksa, kaynak kodun yanına bak
-	if _, err := os.Stat(langFile); os.IsNotExist(err) {
-		langFile = filepath.Join("lang", langCode+".json")
+	// Working directory'yi dene
+	if workDir, err := os.Getwd(); err == nil {
+		possiblePaths = append(possiblePaths, filepath.Join(workDir, "lang", langCode+".json"))
+	}
+
+	// İlk mevcut dosyayı bul
+	for _, path := range possiblePaths {
+		if _, err := os.Stat(path); err == nil {
+			langFile = path
+			break
+		}
+	}
+
+	if langFile == "" {
+		return fmt.Errorf("dil dosyası bulunamadı (%s), aranan yollar: %v", langCode, possiblePaths)
 	}
 
 	// Dosyayı oku
@@ -133,6 +155,7 @@ func (lm *LangManager) LoadLanguage(langCode string) error {
 }
 
 func (lm *LangManager) Get(key string, args ...interface{}) string {
+	// Önce mevcut dilde dene
 	if message, exists := lm.langData[key]; exists {
 		if len(args) > 0 {
 			return fmt.Sprintf(message, args...)
@@ -140,7 +163,53 @@ func (lm *LangManager) Get(key string, args ...interface{}) string {
 		return message
 	}
 
-	// Eğer mesaj bulunamazsa anahtar ve argümanları döndür
+	// Mevcut dil İngilizce değilse İngilizce'den dene
+	if lm.currentLang != "en" {
+		// Yeni bir LangManager oluştur İngilizce için
+		tempManager := &LangManager{
+			currentLang: "en",
+			langData:    make(map[string]string),
+			configPath:  lm.configPath,
+		}
+
+		err := tempManager.LoadLanguage("en")
+		if err == nil {
+			if message, exists := tempManager.langData[key]; exists {
+				if len(args) > 0 {
+					return fmt.Sprintf(message, args...)
+				}
+				return message
+			}
+		}
+	}
+
+	// Hard-coded fallback mesajları
+	fallbackMessages := map[string]string{
+		"app_description":   "sysundo - Automatic backup tool for system file operations",
+		"usage":             "Usage:",
+		"watch_usage":       "sysundo watch <command> [arguments...]  - Execute command while backing up files",
+		"undo_usage":        "sysundo undo                          - Restore last backups",
+		"help_usage":        "sysundo help                          - Show this help text",
+		"lang_usage":        "sysundo lang [language_code]          - Set language or show available languages",
+		"examples":          "Examples:",
+		"example_watch_rm":  "sysundo watch rm file.txt",
+		"example_watch_mv":  "sysundo watch mv source.py target/",
+		"example_watch_cp":  "sysundo watch cp *.json backup/",
+		"example_undo":      "sysundo undo",
+		"example_lang_set":  "sysundo lang tr",
+		"example_lang_list": "sysundo lang",
+		"unknown_command":   "Unknown command: %s",
+		"error":             "Error: %v",
+	}
+
+	if message, exists := fallbackMessages[key]; exists {
+		if len(args) > 0 {
+			return fmt.Sprintf(message, args...)
+		}
+		return message
+	}
+
+	// Eğer hiç bulunamazsa anahtar ve argümanları döndür
 	if len(args) > 0 {
 		return fmt.Sprintf("[%s] %v", key, args)
 	}
@@ -163,18 +232,37 @@ func (lm *LangManager) GetCurrentLanguage() string {
 
 func (lm *LangManager) GetAvailableLanguages() ([]string, error) {
 	var languages []string
+	var langDir string
 
-	// Çalıştırılabilir dosyanın bulunduğu dizini bul
-	execPath, err := os.Executable()
-	if err != nil {
-		execPath = "."
+	// Farklı yolları sırayla deneyeceğiz
+	possiblePaths := []string{
+		"lang",
+		filepath.Join(".", "lang"),
 	}
-	execDir := filepath.Dir(execPath)
 
-	// Lang dizinini kontrol et
-	langDir := filepath.Join(execDir, "lang")
-	if _, err := os.Stat(langDir); os.IsNotExist(err) {
-		langDir = "lang"
+	// Executable path'i dene
+	if execPath, err := os.Executable(); err == nil {
+		execDir := filepath.Dir(execPath)
+		possiblePaths = append([]string{
+			filepath.Join(execDir, "lang"),
+		}, possiblePaths...)
+	}
+
+	// Working directory'yi dene
+	if workDir, err := os.Getwd(); err == nil {
+		possiblePaths = append(possiblePaths, filepath.Join(workDir, "lang"))
+	}
+
+	// İlk mevcut dizini bul
+	for _, path := range possiblePaths {
+		if info, err := os.Stat(path); err == nil && info.IsDir() {
+			langDir = path
+			break
+		}
+	}
+
+	if langDir == "" {
+		return nil, fmt.Errorf("lang dizini bulunamadı, aranan yollar: %v", possiblePaths)
 	}
 
 	// Lang dizinindeki dosyaları listele
@@ -190,6 +278,8 @@ func (lm *LangManager) GetAvailableLanguages() ([]string, error) {
 			languages = append(languages, langCode)
 		}
 	}
+
+	sort.Strings(languages)
 
 	return languages, nil
 }
